@@ -7,16 +7,29 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {DEVICE}")
 
 # ── Load model & tokenizer ───────────────────────────────
-print("Loading tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+try:
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
 
-print("Loading model... (this may take a minute)")
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_PATH,
-    torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
-    device_map="auto",        # automatically handles GPU/CPU placement
-    low_cpu_mem_usage=True,   # important for large models
-)
+    # Set padding token to avoid warnings
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    print("Loading model... (this may take a minute)")
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_PATH,
+        torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
+        device_map="auto",        # automatically handles GPU/CPU placement
+        low_cpu_mem_usage=True,   # important for large models
+    )
+except Exception as e:
+    print(f"\nError loading model: {e}")
+    print("\nTroubleshooting tips:")
+    print("1. Make sure the model path is correct in chat.py")
+    print("2. Download the model using: huggingface-cli download meta-llama/Llama-2-7b-chat-hf")
+    print("3. Or set MODEL_PATH to a Hugging Face model ID directly")
+    print("4. Ensure you have requested access to Llama 2 on Hugging Face")
+    exit(1)
 
 # ── Llama 2 Chat prompt format ───────────────────────────
 def format_prompt(user_message: str, system_prompt: str = None) -> str:
